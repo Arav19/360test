@@ -35,7 +35,7 @@
 
     let rawAlpha = 0, rawBeta = 0, rawGamma = 0;
     let calibrated = false;
-    let calibrationOffset = { alpha: 0, beta: 0, gamma: 0 };
+    let calibrationQuaternion = new THREE.Quaternion();
 
     function handleOrientation(event) {
       rawAlpha = event.alpha || 0;
@@ -58,10 +58,17 @@
       }
     });
 
+    function eulerFromOrientation(alpha, beta, gamma) {
+      const _x = THREE.MathUtils.degToRad(beta);
+      const _y = THREE.MathUtils.degToRad(alpha);
+      const _z = THREE.MathUtils.degToRad(-gamma);
+      const order = 'YXZ';
+      return new THREE.Euler(_x, _y, _z, order);
+    }
+
     function calibrateNow() {
-      calibrationOffset.alpha = rawAlpha;
-      calibrationOffset.beta = rawBeta;
-      calibrationOffset.gamma = rawGamma;
+      const calibEuler = eulerFromOrientation(rawAlpha, rawBeta, rawGamma);
+      calibrationQuaternion = new THREE.Quaternion().setFromEuler(calibEuler).invert();
       calibrated = true;
       document.getElementById("calibrate").style.display = "none";
     }
@@ -70,18 +77,10 @@
       requestAnimationFrame(animate);
 
       if (calibrated) {
-        const alpha = rawAlpha - calibrationOffset.alpha;
-        const beta = rawBeta - calibrationOffset.beta;
-        const gamma = rawGamma - calibrationOffset.gamma;
-
-        const euler = new THREE.Euler(
-          THREE.MathUtils.degToRad(beta),
-          THREE.MathUtils.degToRad(gamma),
-          THREE.MathUtils.degToRad(alpha),
-          'YXZ'
-        );
-
-        camera.setRotationFromEuler(euler);
+        const currentEuler = eulerFromOrientation(rawAlpha, rawBeta, rawGamma);
+        const currentQuat = new THREE.Quaternion().setFromEuler(currentEuler);
+        const correctedQuat = currentQuat.multiply(calibrationQuaternion);
+        camera.quaternion.copy(correctedQuat);
       }
 
       renderer.render(scene, camera);
