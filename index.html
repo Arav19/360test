@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gyro Sphere Viewer</title>
   <style>
     body { margin: 0; overflow: hidden; background: black; }
@@ -28,7 +28,7 @@
   <script>
     let scene, camera, renderer;
 
-    // Basic scene setup
+    // Setup
     scene = new THREE.Scene();
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -39,37 +39,32 @@
     camera.position.set(0, 0, 0);
     scene.add(camera);
 
-    // Sphere inside-out wireframe
+    // Sphere (rotated so union lines are at the bottom)
     const geometry = new THREE.SphereGeometry(10, 32, 32);
     const material = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, side: THREE.BackSide });
     const sphere = new THREE.Mesh(geometry, material);
+    sphere.rotation.x = Math.PI / 2; // rotate 90 degrees so "bottom" is bottom
     scene.add(sphere);
 
-    // Orientation and calibration logic
+    // Orientation + Calibration
     let rawAlpha = 0, rawBeta = 0, rawGamma = 0;
     let calibrated = false;
     let calibrationOffset = new THREE.Quaternion();
 
     function handleOrientation(event) {
-      rawAlpha = event.alpha || 0;
-      rawBeta = event.beta || 0;
-      rawGamma = event.gamma || 0;
+      rawAlpha = event.alpha || 0;   // Yaw
+      rawBeta = event.beta || 0;     // Pitch
+      rawGamma = event.gamma || 0;   // Roll
     }
 
     function eulerFromOrientation(alpha, beta, gamma) {
-      // Convert degrees to radians
       const _alpha = THREE.MathUtils.degToRad(alpha);
       const _beta = THREE.MathUtils.degToRad(beta);
       const _gamma = THREE.MathUtils.degToRad(gamma);
 
-      // Orientation correction: standard intrinsic Tait-Bryan angles Z-X'-Y''
-      const euler = new THREE.Euler(_beta, -_alpha, _gamma, 'YXZ');
-
-      // Adjust to rotate sphere so union lines are at the bottom
-      const deviceQuat = new THREE.Quaternion().setFromEuler(euler);
-      const correctionQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
-
-      return deviceQuat.multiply(correctionQuat);
+      // Construct Euler with ZXY order (Yaw, Roll, Pitch)
+      const euler = new THREE.Euler(_beta, _alpha, -_gamma, 'ZXY');
+      return new THREE.Quaternion().setFromEuler(euler);
     }
 
     function calibrateNow() {
@@ -79,6 +74,7 @@
       document.getElementById("calibrate").style.display = "none";
     }
 
+    // Calibration button
     const button = document.getElementById("calibrate");
     button.addEventListener("click", () => {
       if (typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -94,13 +90,14 @@
       }
     });
 
+    // Animation loop
     function animate() {
       requestAnimationFrame(animate);
 
       if (calibrated) {
         const deviceQuat = eulerFromOrientation(rawAlpha, rawBeta, rawGamma);
         const finalQuat = deviceQuat.multiply(calibrationOffset);
-        camera.quaternion.slerp(finalQuat, 0.2); // smooth movement
+        camera.quaternion.slerp(finalQuat, 0.15);
       }
 
       renderer.render(scene, camera);
