@@ -58,16 +58,17 @@
 
     function eulerFromOrientation(alpha, beta, gamma) {
       // Convert degrees to radians
-      const _x = THREE.MathUtils.degToRad(beta);
-      const _y = THREE.MathUtils.degToRad(alpha);
-      const _z = THREE.MathUtils.degToRad(gamma);
+      const _alpha = THREE.MathUtils.degToRad(alpha);
+      const _beta = THREE.MathUtils.degToRad(beta);
+      const _gamma = THREE.MathUtils.degToRad(gamma);
 
-      // Construct the rotation based on intrinsic 'ZXY' order
-      const euler = new THREE.Euler(_x, -_y, _z, 'ZXY');
+      // Orientation correction: standard intrinsic Tait-Bryan angles Z-X'-Y''
+      const euler = new THREE.Euler(_beta, -_alpha, _gamma, 'YXZ');
 
-      // Rotate 90 degrees on X to shift union lines to the bottom
+      // Adjust to rotate sphere so union lines are at the bottom
       const deviceQuat = new THREE.Quaternion().setFromEuler(euler);
       const correctionQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+
       return deviceQuat.multiply(correctionQuat);
     }
 
