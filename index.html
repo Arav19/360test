@@ -53,7 +53,7 @@
     }
 
     function eulerFromOrientation(alpha, beta, gamma) {
-      const _alpha = THREE.MathUtils.degToRad(-alpha); // Inverted yaw for correct left-right
+      const _alpha = THREE.MathUtils.degToRad(alpha); // Re-swapped yaw to correct left-right
       const _beta = THREE.MathUtils.degToRad(beta);
       const _gamma = THREE.MathUtils.degToRad(gamma);
 
