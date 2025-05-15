@@ -7,9 +7,11 @@
   <style>
     body { margin: 0; overflow: hidden; background: black; }
     canvas { display: block; }
+    #calibrate { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 1em 2em; font-size: 1.2em; border: none; border-radius: 10px; cursor: pointer; z-index: 1; }
   </style>
 </head>
 <body>
+  <button id="calibrate">Tap to Calibrate</button>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>
     let scene, camera, renderer;
@@ -31,36 +33,56 @@
     const sphere = new THREE.Mesh(geometry, material);
     scene.add(sphere);
 
-    let alpha = 0, beta = 0, gamma = 0;
+    let rawAlpha = 0, rawBeta = 0, rawGamma = 0;
+    let calibrated = false;
+    let calibrationOffset = { alpha: 0, beta: 0, gamma: 0 };
 
-    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      // iOS 13+
-      DeviceOrientationEvent.requestPermission().then(permissionState => {
-        if (permissionState === 'granted') {
-          window.addEventListener('deviceorientation', (event) => {
-            alpha = event.alpha || 0;
-            beta = event.beta || 0;
-            gamma = event.gamma || 0;
-          });
-        }
-      }).catch(console.error);
-    } else {
-      // non-iOS
-      window.addEventListener('deviceorientation', (event) => {
-        alpha = event.alpha || 0;
-        beta = event.beta || 0;
-        gamma = event.gamma || 0;
-      });
+    function handleOrientation(event) {
+      rawAlpha = event.alpha || 0;
+      rawBeta = event.beta || 0;
+      rawGamma = event.gamma || 0;
+    }
+
+    const button = document.getElementById("calibrate");
+    button.addEventListener("click", () => {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission().then(state => {
+          if (state === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation);
+            calibrateNow();
+          }
+        }).catch(console.error);
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+        calibrateNow();
+      }
+    });
+
+    function calibrateNow() {
+      calibrationOffset.alpha = rawAlpha;
+      calibrationOffset.beta = rawBeta;
+      calibrationOffset.gamma = rawGamma;
+      calibrated = true;
+      document.getElementById("calibrate").style.display = "none";
     }
 
     function animate() {
       requestAnimationFrame(animate);
 
-      const radAlpha = THREE.MathUtils.degToRad(alpha);
-      const radBeta = THREE.MathUtils.degToRad(beta);
-      const radGamma = THREE.MathUtils.degToRad(gamma);
+      if (calibrated) {
+        const alpha = rawAlpha - calibrationOffset.alpha;
+        const beta = rawBeta - calibrationOffset.beta;
+        const gamma = rawGamma - calibrationOffset.gamma;
 
-      camera.rotation.set(radBeta, radAlpha, -radGamma);
+        const euler = new THREE.Euler(
+          THREE.MathUtils.degToRad(beta),
+          THREE.MathUtils.degToRad(gamma),
+          THREE.MathUtils.degToRad(alpha),
+          'YXZ'
+        );
+
+        camera.setRotationFromEuler(euler);
+      }
 
       renderer.render(scene, camera);
     }
