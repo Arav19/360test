@@ -31,7 +31,18 @@
       side: THREE.BackSide
     });
     const sphere = new THREE.Mesh(geometry, material);
+
+    // Rotate the sphere so the union of lines is at the bottom
+    sphere.rotation.x = Math.PI / 2;
     scene.add(sphere);
+
+    // Create a parent object to handle camera orientation
+    const cameraParent = new THREE.Object3D();
+    cameraParent.add(camera);
+    scene.add(cameraParent);
+
+    // Pre-rotate the camera to match the sphere rotation
+    cameraParent.rotation.x = Math.PI / 2;
 
     let rawAlpha = 0, rawBeta = 0, rawGamma = 0;
     let calibrated = false;
