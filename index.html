@@ -60,11 +60,15 @@
       // Convert degrees to radians
       const _x = THREE.MathUtils.degToRad(beta);
       const _y = THREE.MathUtils.degToRad(alpha);
-      const _z = THREE.MathUtils.degToRad(-gamma);
+      const _z = THREE.MathUtils.degToRad(gamma);
 
-      // Phone is held in portrait mode: remap to world
-      const euler = new THREE.Euler(_x, _y, _z, 'ZXY');
-      return new THREE.Quaternion().setFromEuler(euler);
+      // Construct the rotation based on intrinsic 'ZXY' order
+      const euler = new THREE.Euler(_x, -_y, _z, 'ZXY');
+
+      // Rotate 90 degrees on X to shift union lines to the bottom
+      const deviceQuat = new THREE.Quaternion().setFromEuler(euler);
+      const correctionQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+      return deviceQuat.multiply(correctionQuat);
     }
 
     function calibrateNow() {
@@ -95,7 +99,7 @@
       if (calibrated) {
         const deviceQuat = eulerFromOrientation(rawAlpha, rawBeta, rawGamma);
         const finalQuat = deviceQuat.multiply(calibrationOffset);
-        camera.quaternion.copy(finalQuat);
+        camera.quaternion.slerp(finalQuat, 0.2); // smooth movement
       }
 
       renderer.render(scene, camera);
