@@ -46,14 +46,26 @@
     let calibrated = false;
     let calibrationOffset = new THREE.Quaternion();
 
+    let smoothAlpha = 0, smoothBeta = 0, smoothGamma = 0;
+
     function handleOrientation(event) {
-      rawAlpha = event.alpha || 0;
-      rawBeta = event.beta || 0;
-      rawGamma = event.gamma || 0;
+      // Low-pass filter to smooth out jitter
+      const alpha = event.alpha || 0;
+      const beta = event.beta || 0;
+      const gamma = event.gamma || 0;
+
+      const smoothing = 0.1;
+      smoothAlpha = smoothing * alpha + (1 - smoothing) * smoothAlpha;
+      smoothBeta = smoothing * beta + (1 - smoothing) * smoothBeta;
+      smoothGamma = smoothing * gamma + (1 - smoothing) * smoothGamma;
+
+      rawAlpha = smoothAlpha;
+      rawBeta = smoothBeta;
+      rawGamma = smoothGamma;
     }
 
     function eulerFromOrientation(alpha, beta, gamma) {
-      const _alpha = THREE.MathUtils.degToRad(alpha); // Re-swapped yaw to correct left-right
+      const _alpha = THREE.MathUtils.degToRad(-alpha); // flip yaw for correct direction
       const _beta = THREE.MathUtils.degToRad(beta);
       const _gamma = THREE.MathUtils.degToRad(gamma);
 
@@ -92,7 +104,7 @@
       if (calibrated) {
         const deviceQuat = eulerFromOrientation(rawAlpha, rawBeta, rawGamma);
         const finalQuat = deviceQuat.multiply(calibrationOffset);
-        camera.quaternion.slerp(finalQuat, 0.1); // smoother transition
+        camera.quaternion.slerp(finalQuat, 0.08); // smoother slerp
       }
 
       renderer.render(scene, camera);
