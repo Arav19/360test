@@ -49,12 +49,11 @@
     let smoothAlpha = 0, smoothBeta = 0, smoothGamma = 0;
 
     function handleOrientation(event) {
-      // Low-pass filter to smooth out jitter
       const alpha = event.alpha || 0;
       const beta = event.beta || 0;
       const gamma = event.gamma || 0;
 
-      const smoothing = 0.1;
+      const smoothing = 0.15;
       smoothAlpha = smoothing * alpha + (1 - smoothing) * smoothAlpha;
       smoothBeta = smoothing * beta + (1 - smoothing) * smoothBeta;
       smoothGamma = smoothing * gamma + (1 - smoothing) * smoothGamma;
@@ -65,7 +64,7 @@
     }
 
     function eulerFromOrientation(alpha, beta, gamma) {
-      const _alpha = THREE.MathUtils.degToRad(-alpha); // flip yaw for correct direction
+      const _alpha = THREE.MathUtils.degToRad(alpha); // fix: don't invert alpha here
       const _beta = THREE.MathUtils.degToRad(beta);
       const _gamma = THREE.MathUtils.degToRad(gamma);
 
@@ -104,7 +103,7 @@
       if (calibrated) {
         const deviceQuat = eulerFromOrientation(rawAlpha, rawBeta, rawGamma);
         const finalQuat = deviceQuat.multiply(calibrationOffset);
-        camera.quaternion.slerp(finalQuat, 0.08); // smoother slerp
+        camera.quaternion.slerp(finalQuat, 0.05); // slightly slower and smoother
       }
 
       renderer.render(scene, camera);
